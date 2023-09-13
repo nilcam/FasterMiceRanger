@@ -272,6 +272,7 @@ miceRanger <- function(
     , oldIt = 0
     , startTime
     , returnModels
+    , varCores = 3
     , ...
   )
   endTime <- Sys.time()
