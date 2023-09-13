@@ -218,7 +218,7 @@ miceRanger <- function(
   }
   
   # These characters in variable names cause problems when plotting:
-  checkSpecChars(vara)
+  #checkSpecChars(vara)
   
   # Only keep columns that can be used.
   if (any(!names(dat) %in% vara)) dat[,(setdiff(names(dat),vara)) := NULL]
