@@ -17,6 +17,7 @@ runIterations <- function(
   , oldIt = 0
   , startTime
   , returnModels
+  , varCores = 3
   , ...
 ) {
   
@@ -38,11 +39,11 @@ runIterations <- function(
     , .multicombine = TRUE
     , .inorder = FALSE
     , .errorhandling = 'pass'
-    , .packages = c('data.table','ranger','FNN')
+    , .packages = c('data.table','ranger','FNN', 'parallel')
     , .verbose = FALSE
   ) %op% {
     
-    # Move away from for-loops and towards parLapply.
+    
     dsImport <- list()
     dsError <- list()
     dsImps <- list()
@@ -59,13 +60,10 @@ runIterations <- function(
     
     for (iter in 1:maxiter) {
       
-      iterImps <- list()
-      iterError <- list()
-      iterImport <- list()
-      
       if(verbose) cat("iteration",iter + oldIt,"\t")
       
-      for (impVar in varn) {
+    # Change to mclapply
+      loopVar <- mclapply(varn, function(impVar) {
 
         # Only feed ranger the columns we need for this imputation
         algCols <- c(impVar,vars[[impVar]])
@@ -100,7 +98,7 @@ runIterations <- function(
         
         # Extract information we need from the model.
         pred <- predict(model,dats)$predictions
-        iterImps[[impVar]] <- imputeFromPred(
+        tmp <- imputeFromPred(
             pred = if (returnProb) pred[missIndx,] else pred[missIndx]
           , modelType = modelTypes[impVar]
           , valueSelector = valueSelector[impVar]
@@ -108,31 +106,43 @@ runIterations <- function(
           , prior = dats[!missIndx][,get(impVar)]
           , priorPreds = if (returnProb) pred[!missIndx,] else pred[!missIndx]
         )
-        dats[missIndx,(impVar) := iterImps[[impVar]]]
-        iterImport[[impVar]] <- as.data.table(as.list(model$variable.importance))
+        dats[missIndx,(impVar) := tmp]
+        tmp2 <- as.data.table(as.list(model$variable.importance))
         if(modelTypes[impVar] == "Regression") {
-          iterError[[impVar]] <- model$r.squared
+          tmp3 <- model$r.squared
         } else {
-          iterError[[impVar]] <- 1-model$prediction.error
+          tmp3 <- 1-model$prediction.error
         }
         
         rm(model)
-        
-      }
+        list(iterImport = tmp2, iterError = tmp3, iterImps = tmp)
+      }, mc.cores = varCores
+      )
       
+      iterImport <- lapply(loopVar, function(t) t$iterImport)
+      iterImps <- lapply(loopVar, function(t) t$iterImps)
+      iterError <- lapply(loopVar, function(t) t$iterError)
+      rm(loopVar)
+
       # Now that the models have been run for this iteration...
       
       # Add to iteration importance list. Sort names for pretty plotting.
-      dsImport[[iter]] <- rbindlist(iterImport,fill = TRUE)
+
+      names(iterImport) <- varn
+      dsImport[[iter]] <- rbindlist(list(iterImport), fill = TRUE)
       toOrder <- names(dsImport[[iter]])
       dsImport[[iter]]$variable <- varn
       setcolorder(dsImport[[iter]],c("variable",toOrder[order(match(toOrder,vara))]))
       
       # Add to iteration model error list
-      dsError[[iter]] <- iterError
+      names(iterError) <- varn
+      dsError[[iter]] <- rbindlist(list(iterError))
+      
       
       # Add to iteration imputation list
-      dsImps[[iter]] <- iterImps
+      names(iterImps) <- varn
+      dsImps[[iter]] <- rbindlist(list(iterImps))
+  
       
       rm(iterImps,iterError,iterImport)
       
@@ -147,6 +157,7 @@ runIterations <- function(
       }
       
     }
+
     
     # Adjust names
     names(dsImps) <- paste0("Iteration_",1:maxiter + oldIt)
