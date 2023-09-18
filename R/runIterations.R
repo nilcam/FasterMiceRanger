@@ -17,7 +17,7 @@ runIterations <- function(
   , oldIt = 0
   , startTime
   , returnModels
-  , varCores = 3
+  , varCores
   , ...
 ) {
   
