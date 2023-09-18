@@ -154,6 +154,7 @@ miceRanger <- function(
   , returnModels = FALSE
   , parallel = FALSE
   , verbose = TRUE
+  , varCores = 3
   , ...
 )
 {
@@ -272,7 +273,7 @@ miceRanger <- function(
     , oldIt = 0
     , startTime
     , returnModels
-    , varCores = 3
+    , varCores
     , ...
   )
   endTime <- Sys.time()
