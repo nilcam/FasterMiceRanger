@@ -39,7 +39,7 @@ runIterations <- function(
     , .multicombine = TRUE
     , .inorder = FALSE
     , .errorhandling = 'pass'
-    , .packages = c('data.table','ranger','FNN', 'parallel')
+    , .packages = c('data.table','ranger','FNN', 'multicore')
     , .verbose = FALSE
   ) %op% {
     
@@ -136,12 +136,12 @@ runIterations <- function(
       
       # Add to iteration model error list
       names(iterError) <- varn
-      dsError[[iter]] <- rbindlist(list(iterError))
+      dsError[[iter]] <- iterError
       
       
       # Add to iteration imputation list
       names(iterImps) <- varn
-      dsImps[[iter]] <- rbindlist(list(iterImps))
+      dsImps[[iter]] <- iterImps
   
       
       rm(iterImps,iterError,iterImport)
