@@ -39,7 +39,7 @@ runIterations <- function(
     , .multicombine = TRUE
     , .inorder = FALSE
     , .errorhandling = 'pass'
-    , .packages = c('data.table','ranger','FNN', 'multicore')
+    , .packages = c('data.table','ranger','FNN', 'parallel')
     , .verbose = FALSE
   ) %op% {
     
